@@ -545,8 +545,18 @@ a{color:var(--brand)}
     function setDaysErr(on){daysErr.hidden=!on;daysIn.setAttribute("aria-invalid",String(on));if(on)daysIn.setAttribute("aria-describedby","owndayserr");else daysIn.removeAttribute("aria-describedby");}
     sel.onchange=function(){document.getElementById("owndays").hidden=sel.value!=="custom";};
     daysIn.oninput=function(){if(!daysErr.hidden)setDaysErr(false);};
+    // swap the card's timing label (check-in card only) and keep focus on its new settings link
+    function setCardLabel(text,link){
+      var box=lastTrigger&&lastTrigger.closest(".ai"); if(!box) return null;
+      var nb=document.createElement("div"); nb.className="ai no-tag";
+      nb.innerHTML='<p>'+esc(text)+' <button class="linkbtn" data-settings>'+link+'</button></p>';
+      var old=$screen.querySelector(".toast.saved"); if(old) old.remove();
+      box.replaceWith(nb); var btn=nb.querySelector("[data-settings]"); btn.onclick=function(){openSheet(p,btn);}; lastTrigger=btn;
+      return nb;
+    }
     document.getElementById("save").onclick=function(){
       var choice=$overlay.querySelector('input[name="ck"]:checked');
+      if(choice&&choice.value==="two") setCardLabel("We check in 2 weeks before your appointment.","Let Doctolib adjust the timing to you");
       if(!choice||choice.value!=="own"){closeSheet();announce("Check-in settings saved.");return;}
       var when=sel.options[sel.selectedIndex].text;
       if(sel.value==="custom"){
@@ -554,7 +564,7 @@ a{color:var(--brand)}
         if(!/^\d+$/.test(v)||n<7||n>28){setDaysErr(true);daysIn.focus();return;}
         when=n+" days";
       }
-      var msg="Saved. We’ll check in "+when+" before your appointments.", host=lastTrigger&&lastTrigger.closest("div");
+      var msg="Saved. We’ll check in "+when+" before your appointments.", host=setCardLabel("We check in "+when+" before your appointments, as you chose.","Check-in settings")||(lastTrigger&&lastTrigger.closest("div"));
       closeSheet();
       if(host&&document.body.contains(host)){var old=$screen.querySelector(".toast.saved");if(old)old.remove();var t=document.createElement("p");t.className="toast saved";t.textContent=msg;host.insertAdjacentElement("afterend",t);}
       announce(msg);
