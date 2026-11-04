@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Appointment check-in prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#0B6CB5; --brand-ink:#FFFFFF;
+  --ink:#0F2E57; --ink-2:#4A5F7A;
+  --bg:#EEF3F8; --surface:#FFFFFF; --soft:#E6F5FC; --muted-surface:#F2F5F9;
+  --line:#C7D5E3; --control:#6B7F95; --focus:#0B6CB5;
+  --skeleton:#DCE5EE; --chip:#0F2E57; --chip-ink:#FFFFFF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --brand:#7CC0F0; --brand-ink:#0E1A2A;
+    --ink:#E8EEF5; --ink-2:#A9B8C9;
+    --bg:#0E1A2A; --surface:#152234; --soft:#1B3550; --muted-surface:#1B2A3F;
+    --line:#2C3F57; --control:#8299B5; --focus:#7CC0F0;
+    --skeleton:#24364D; --chip:#E8EEF5; --chip-ink:#0E1A2A;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --brand:#7CC0F0; --brand-ink:#0E1A2A;
+  --ink:#E8EEF5; --ink-2:#A9B8C9;
+  --bg:#0E1A2A; --surface:#152234; --soft:#1B3550; --muted-surface:#1B2A3F;
+  --line:#2C3F57; --control:#8299B5; --focus:#7CC0F0;
+  --skeleton:#24364D; --chip:#E8EEF5; --chip-ink:#0E1A2A;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Roboto,"Helvetica Neue",Arial,sans-serif}
+h1,h2,h3{font-family:Montserrat,"Helvetica Neue",Arial,sans-serif;margin:0;color:var(--ink)}
+button{font:inherit;color:inherit}
+a{color:var(--brand)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* prototype controls, outside the phone */
+.proto{max-width:860px;margin:0 auto;padding:16px 16px 0}
+.proto details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.proto summary{cursor:pointer;font-weight:500;min-height:44px;display:flex;align-items:center}
+.proto .group{margin:6px 0 10px}
+.proto .group p{margin:4px 0 6px;font-size:14px;color:var(--ink-2)}
+.proto .row{display:flex;flex-wrap:wrap;gap:8px}
+.proto .row button{min-height:44px;padding:0 14px;border:1px solid var(--control);background:var(--surface);border-radius:22px;cursor:pointer;font-size:15px}
+.proto .row button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+/* phone */
+.stage{display:flex;justify-content:center;padding:16px}
+.phone{width:100%;max-width:390px;min-height:780px;background:var(--surface);border-radius:28px;overflow:hidden;border:1px solid var(--line);display:flex;flex-direction:column;position:relative}
+.appbar{background:var(--brand);color:var(--brand-ink);padding:18px 16px 16px;display:flex;align-items:center;gap:8px;min-height:64px}
+.appbar h1{color:var(--brand-ink);font-size:18px;font-weight:600}
+.appbar .back{background:none;border:0;color:var(--brand-ink);min-width:44px;min-height:44px;display:grid;place-items:center;cursor:pointer;margin-left:-10px}
+.screen{padding:20px 16px 28px;flex:1}
+.screen > h2{font-size:22px;font-weight:700;margin-bottom:16px;line-height:1.25}
+
+.card{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.card-pad{padding:16px}
+.kicker{font-size:14px;font-weight:500;color:var(--ink-2);margin:0 0 4px}
+.card h3{font-size:19px;font-weight:700;line-height:1.3}
+.facts{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.facts li{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;color:var(--ink)}
+.facts svg{margin-top:2px}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.note{background:var(--muted-surface);border-radius:10px;padding:10px 12px;margin-top:14px}
+.note .lbl{font-size:14px;color:var(--ink-2);margin:0}
+.note p{margin:2px 0 0}
+.linkbtn{background:none;border:0;padding:0;color:var(--brand);text-decoration:underline;cursor:pointer;min-height:44px;font-weight:500}
+.add-note{margin-top:10px}
+
+.question{font-family:Montserrat,"Helvetica Neue",Arial,sans-serif;font-weight:600;font-size:17px;margin:20px 0 12px}
+.actions{display:grid;gap:12px}
+.act{min-height:48px;width:100%;border:1.5px solid var(--control);border-radius:10px;background:var(--surface);font-weight:500;font-size:16px;cursor:pointer;color:var(--ink)}
+.act:hover{background:var(--soft)}
+.helper{margin:6px 0 0;font-size:15px;color:var(--ink-2)}
+.later{margin-top:8px}
+.later-opts{display:flex;gap:10px;margin-top:4px}
+.later-opts[hidden]{display:none}
+.later-opts button{min-height:44px;padding:0 16px;border:1.5px solid var(--control);border-radius:22px;background:var(--surface);cursor:pointer;font-weight:500}
+
+.ai{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.ai.no-tag{grid-template-columns:1fr}
+.tag{background:var(--chip);color:var(--chip-ink);font-size:13px;font-weight:700;border-radius:5px;padding:1px 7px;margin-top:2px;letter-spacing:.02em;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.tag::before{content:"";width:11px;height:11px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 0c.4 3.9 2.1 5.6 6 6-3.9.4-5.6 2.1-6 6-.4-3.9-2.1-5.6-6-6 3.9-.4 5.6-2.1 6-6Zm5.5 10c.2 1.9 1 2.8 2.5 3-1.5.2-2.3 1.1-2.5 3-.2-1.9-1-2.8-2.5-3 1.5-.2 2.3-1.1 2.5-3Z'/%3E%3C/svg%3E") no-repeat center/contain;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 0c.4 3.9 2.1 5.6 6 6-3.9.4-5.6 2.1-6 6-.4-3.9-2.1-5.6-6-6 3.9-.4 5.6-2.1 6-6Zm5.5 10c.2 1.9 1 2.8 2.5 3-1.5.2-2.3 1.1-2.5 3-.2-1.9-1-2.8-2.5-3 1.5-.2 2.3-1.1 2.5-3Z'/%3E%3C/svg%3E") no-repeat center/contain}
+.opt.ai-opt{position:relative;background:var(--soft);border-color:var(--control);padding-right:60px}
+.tag.corner{position:absolute;top:10px;right:10px;margin:0}
+.opt .tag.corner{color:var(--chip-ink);font-size:13px}
+.ai p{margin:0;font-size:15px;color:var(--ink-2)}
+.ai .linkbtn{min-height:0;display:inline;font-size:15px}
+
+.timing{background:var(--soft);border-radius:10px;padding:14px;margin-top:14px}
+.timing p{margin:0 0 10px;font-weight:500}
+.timing .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.timing .opts button{min-height:44px;border:1.5px solid var(--control);border-radius:22px;background:var(--surface);cursor:pointer;font-weight:500}
+.timing .done{margin:0;font-weight:400}
+
+/* booking confirmation */
+.confirmed{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.confirmed .ok{width:32px;height:32px;border-radius:50%;background:var(--soft);display:grid;place-items:center;flex:none}
+.checkin-line{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:12px}
+.checkin-line h3{font-size:16px;font-weight:600;margin-bottom:4px}
+.checkin-line p{margin:4px 0 0;color:var(--ink-2)}
+.checkin-line .lead{color:var(--ink)}
+.status-row{display:flex;gap:10px;align-items:flex-start}
+.sk{height:12px;border-radius:6px;background:var(--skeleton);margin-top:10px}
+.sk.w1{width:90%}.sk.w2{width:65%}
+@media (prefers-reduced-motion: no-preference){
+  .sk{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.5}}
+}
+.primary{display:block;width:100%;min-height:52px;margin-top:24px;border:0;border-radius:10px;background:var(--brand);color:var(--brand-ink);font-weight:700;font-size:16px;cursor:pointer}
+.secondary{display:block;width:100%;min-height:52px;margin-top:12px;border:1.5px solid var(--control);border-radius:10px;background:var(--surface);font-weight:500;cursor:pointer;color:var(--ink);text-align:center;line-height:49px;text-decoration:none}
+
+.secondary[hidden]{display:none}
+.sum{margin-top:16px}
+.appt{margin-top:16px;overflow:hidden}
+.appt-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px;background:var(--ink);color:var(--surface)}
+.appt.cancelled .appt-head{background:#8F5A1F;color:#FFFFFF}
+.appt-when{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:500}
+.appt-when .nw{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.appt-when > svg{flex:none}
+.msg .appt p.sum-name{margin:0;color:var(--ink)}
+.appt-status{background:#FFFFFF;color:#6B4316;font-weight:700;font-size:14px;border-radius:12px;padding:2px 10px;white-space:nowrap}
+.appt-link{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:0 16px;background:none;border:0;border-top:1px solid var(--line);color:var(--brand);font-weight:700;font-size:16px;cursor:pointer;text-align:left}
+.sum-top{display:flex;gap:14px;align-items:center;padding:16px;border-bottom:1px solid var(--line)}
+.avatar{width:52px;height:52px;border-radius:50%;background:var(--soft);color:var(--ink);display:grid;place-items:center;font-family:Montserrat,"Helvetica Neue",Arial,sans-serif;font-weight:700;flex:none}
+.sum-name{margin:0;font-family:Montserrat,"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:17px;color:var(--ink)}
+.msg .sum-spec{margin:2px 0 0;color:var(--ink-2)}
+.sum-facts{margin:0;padding:16px}
+.msg .sum p.sum-name{margin:0;color:var(--ink)}
+.appbar[hidden]{display:none}
+.toggle{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px;cursor:pointer}
+.toggle input{width:20px;height:20px;accent-color:var(--brand)}
+.lockscreen{background:linear-gradient(180deg,#22344D,#101C2C);color:#FFFFFF;padding:56px 14px 28px;text-align:center}
+.lockscreen .lk-date{margin:0;font-size:17px;font-weight:500;color:#D9E3EE}
+.lockscreen .lk-time{margin:0 0 36px;font-family:Montserrat,"Helvetica Neue",Arial,sans-serif;font-size:76px;font-weight:600;line-height:1.1;color:#FFFFFF}
+.notif{display:grid;grid-template-columns:38px 1fr;gap:10px;width:100%;text-align:left;background:rgba(255,255,255,.92);color:#0F2E57;border:0;border-radius:18px;padding:12px 14px;cursor:pointer}
+.notif .app-ic{width:38px;height:38px;border-radius:9px;background:#0B6CB5;color:#FFFFFF;display:grid;place-items:center}
+.notif .meta{display:flex;justify-content:space-between;font-size:13px;color:#4A5F7A;margin-bottom:2px}
+.notif .txt{font-size:15px;line-height:1.35;color:#0F2E57}
+.lk-hint{margin:16px 0 0;font-size:14px;color:#D9E3EE}
+/* message screens */
+.msg{padding-top:24px}
+.msg h2{font-size:21px;line-height:1.3;margin-bottom:8px}
+.msg p{margin:8px 0;color:var(--ink-2)}
+.urgent{margin-top:20px;padding:14px;border-radius:10px;background:var(--muted-surface)}
+.urgent p{margin:0;color:var(--ink)}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+.slots button{min-height:48px;border:0;border-radius:8px;background:var(--soft);color:var(--ink);font-weight:500;cursor:pointer}
+.acc{border:1px solid var(--line);border-radius:12px;margin-top:10px;overflow:hidden}
+.acc h3{margin:0}
+.acc-h{width:100%;display:flex;justify-content:space-between;align-items:center;min-height:56px;padding:0 16px;background:none;border:0;font-weight:700;font-size:16px;cursor:pointer;color:var(--ink);text-align:left}
+.acc-h svg{color:var(--brand);flex:none}
+.acc-h[aria-expanded="true"] svg{transform:rotate(180deg)}
+.acc-b{border-top:1px solid var(--line);padding:14px 16px 0}
+.acc-b[hidden],.slots[hidden]{display:none}
+.extra{margin-top:10px}
+.acc-more{display:block;width:calc(100% + 32px);margin:14px -16px 0;min-height:48px;background:none;border:0;border-top:1px solid var(--line);color:var(--brand);font-weight:700;cursor:pointer}
+.acc-b .extra:not([hidden]){margin-bottom:14px}
+
+
+/* settings sheet */
+.scrim{position:absolute;inset:0;background:rgba(15,46,87,.45);display:flex;align-items:flex-end}
+.sheet{background:var(--surface);width:100%;border-radius:18px 18px 0 0;padding:20px 16px 24px;max-height:92%;overflow:auto}
+.sheet h2{font-size:20px;margin-bottom:6px}
+.sheet > p{margin:0 0 14px;color:var(--ink-2);font-size:15px}
+.opt{display:grid;grid-template-columns:24px 1fr;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px;cursor:pointer;min-height:44px}
+.opt input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--brand)}
+.opt b{font-weight:500;display:block}
+.opt span{font-size:14px;color:var(--ink-2)}
+.toast{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:var(--soft)}
+.list-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <details open>
+    <summary>Prototype: choose a state</summary>
+    <label class="toggle"><input type="checkbox" id="lockstart" checked> Start check-in states from the lock-screen notification</label>
+    <div class="group">
+      <p>Check-in card (arrives before the appointment)</p>
+      <div class="row" id="card-states">
+        <button data-go="high">High confidence</button>
+        <button data-go="low">Low confidence</button>
+        <button data-go="no-result">No result</button>
+        <button data-go="cold-start">Cold start</button>
+        <button data-go="ai-off">AI off</button>
+      </div>
+    </div>
+    <div class="group">
+      <p>Stress test (not for testers)</p>
+      <div class="row"><button data-go="long">Longest content</button></div>
+    </div>
+    <div class="group">
+      <p>Booking confirmation (right after booking)</p>
+      <div class="row" id="booking-states">
+        <button data-go="booking">Waiting, then ready</button>
+        <button data-go="booking-slow">Waiting, then failure</button>
+        <button data-go="booking-long">Waiting (long)</button>
+      </div>
+    </div>
+  </details>
+</div>
+
+<div class="stage">
+  <div class="phone" id="phone">
+    <header class="appbar" id="appbar"></header>
+    <main class="screen" id="screen" tabindex="-1"></main>
+    <div id="overlay"></div>
+  </div>
+</div>
+<div class="sr-only" aria-live="polite" id="live"></div>
+
+<script>
+(function(){
+  // Set to false to move the AI label back to the bottom of the card (Lesson 5 layout)
+  var AI_LABEL_TOP = true;
+  // ---------- state payloads (from the design context brief) ----------
+  var BOOKING_LONG = {
+    specialty:"Internal medicine and cardiology",
+    service:"Follow-up consultation with blood test and medication review for long-term care",
+    practice_name:"Gemeinschaftspraxis Innere Medizin und Kardiologie Dr. Weber und Dr. Okonkwo",
+    practitioner_name:"Dr. Anna Weber",
+    appointment_date:"2026-12-08", appointment_time:"10:30"
+  };
+  var BOOKING_DERM = {
+    specialty:"Dermatology", service:"Skin cancer screening",
+    practice_name:"Hautarztpraxis Dr. Weber", practitioner_name:"Dr. Anna Weber",
+    appointment_date:"2026-12-08", appointment_time:"10:30"
+  };
+  var NOTE="Ask about sunscreen for sensitive skin";
+  var P = {
+    long:{state:"high_confidence",reason_code:"usual_reschedule_time",checkin_days_before:28,confidence:0.61,
+      booking:BOOKING_LONG,
+      patient_note:"Ask about the new joint medication from the orthopaedist, whether I still need to pause the blood pressure tablets before the blood test, and bring my updated medication list and the last lab results."},
+    high:{state:"high_confidence",reason_code:"usual_reschedule_time",checkin_days_before:21,confidence:0.61,
+      booking:BOOKING_DERM, patient_note:NOTE},
+    low:{state:"low_confidence",reason_code:"mixed_pattern",checkin_days_before:17,confidence:0.41,
+      booking:BOOKING_DERM, patient_note:NOTE},
+    noResult:{state:"no_result",reason_code:"no_pattern",checkin_days_before:14,confidence:null,
+      booking:BOOKING_DERM, patient_note:NOTE},
+    error:{state:"error",reason_code:"timeout",checkin_days_before:14,confidence:null,
+      booking:BOOKING_DERM, patient_note:NOTE}
+  };
+  // ---------- fixed explanation templates, picked by reason code ----------
+  function explanation(p){
+    var w = Math.round(p.checkin_days_before/7);
+    switch(p.reason_code){
+      case "usual_reschedule_time": return "We’re checking in "+w+" weeks ahead instead of 2, because you usually reschedule around then.";
+      case "mixed_pattern": return "We’re checking in a few days earlier than usual. We’re still learning what timing suits you.";
+      case "no_pattern": return "We check in 2 weeks before your appointment for now, because we haven’t found a timing pattern yet.";
+      case "cold_start": return "We check in 2 weeks before your appointment for now. We’ll learn what timing suits you.";
+      default: return "";
+    }
+  }
+  // ---------- helpers ----------
+  var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  function d(iso){var a=iso.split("-");return new Date(+a[0],+a[1]-1,+a[2]);}
+  function minus(iso,days){var x=d(iso);x.setDate(x.getDate()-days);return x;}
+  function short(x){return x.getDate()+" "+MON[x.getMonth()];}
+  function long(x){return DOW[x.getDay()]+", "+x.getDate()+" "+MON[x.getMonth()];}
+  function rel(days){return days%7===0 ? (days/7)+" weeks" : days+" days";}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+  var $screen=document.getElementById("screen"), $bar=document.getElementById("appbar"),
+      $overlay=document.getElementById("overlay"), $live=document.getElementById("live");
+  function announce(t){$live.textContent="";setTimeout(function(){$live.textContent=t;},50);}
+
+  var ICON={
+    cal:'<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 8.5h14M7 3v3M13 3v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    pin:'<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17s5-4.6 5-8.5A5 5 0 0 0 5 8.5C5 12.4 10 17 10 17Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="8.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+    svc:'<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="3" width="12" height="14.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 7.5h5M7.5 10.5h5M7.5 13.5h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    back:'<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M13.5 4.5 7 11l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    ok:'<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="m4 9.5 3.2 3L14 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  };
+
+  // ---------- app state ----------
+  var current={view:"card",variant:"high"};
+  var timers=[];
+  function clearTimers(){timers.forEach(clearTimeout);timers=[];}
+
+  function bar(title,withBack){
+    $bar.hidden=false; $screen.className="screen";
+    $bar.innerHTML=(withBack?'<button class="back" id="bk" aria-label="Back to my appointments">'+ICON.back+'</button>':'')+'<h1>'+esc(title)+'</h1>';
+    if(withBack) document.getElementById("bk").onclick=function(){renderCard(current.variant);};
+  }
+  function setPressed(name){
+    document.querySelectorAll(".proto button[data-go]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.go===name));});
+  }
+  function focusScreen(){var h=$screen.querySelector("h2");(h||$screen).setAttribute("tabindex","-1");(h||$screen).focus();}
+
+  // ---------- check-in card ----------
+  function cardPayload(v){
+    if(v==="high") return P.high;
+    if(v==="long") return P.long;
+    if(v==="low") return P.low;
+    var p=JSON.parse(JSON.stringify(P.noResult));
+    if(v==="cold-start") p.reason_code="cold_start";
+    if(v==="ai-off") p.reason_code="ai_off";
+    return p;
+  }
+  function renderCard(v){
+    clearTimers(); closeSheet(); current={view:"card",variant:v}; setPressed(v);
+    var p=cardPayload(v), b=p.booking, appt=d(b.appointment_date);
+    var showTiming = (p.state==="low_confidence" || p.reason_code==="cold_start");
+    var aiOff = p.reason_code==="ai_off";
+    var note = p.patient_note
+      ? '<div class="note"><p class="lbl">Your note from booking</p><p class="clamp2" id="note-text">'+esc(p.patient_note)+'</p>'+
+        (p.patient_note.length>70?'<button class="linkbtn" id="more" aria-expanded="false" aria-controls="note-text">Show more</button>':'')+'</div>'
+      : '<button class="linkbtn add-note">+ Add a note for your visit</button>';
+    var ai = aiOff
+      ? '<div class="ai no-tag"><p>We check in 2 weeks before your appointment. <button class="linkbtn" data-settings>Let Doctolib adjust the timing to you</button></p></div>'
+      : '<div class="ai"><span class="tag" aria-label="AI-adjusted timing">AI</span><p>'+esc(explanation(p))+' <button class="linkbtn" data-settings>Check-in settings</button></p></div>';
+    bar("My appointments",false);
+    $screen.innerHTML =
+      '<article class="card card-pad" aria-labelledby="ck-title">'+
+        '<p class="kicker">Check-in</p>'+
+        '<h3 id="ck-title">Your '+esc(b.specialty.toLowerCase())+' appointment is in '+rel(p.checkin_days_before)+'</h3>'+
+        '<ul class="facts">'+
+          '<li>'+ICON.svc+'<span>'+esc(b.service)+'</span></li>'+
+          '<li>'+ICON.cal+'<span>'+long(appt)+', '+esc(b.appointment_time)+'</span></li>'+
+          '<li>'+ICON.pin+'<span class="clamp2">'+esc(b.practice_name)+'</span></li>'+
+        '</ul>'+
+        (AI_LABEL_TOP?ai:'')+
+        note+
+        '<p class="question" id="q">Does this still work for you?</p>'+
+        '<div class="actions" role="group" aria-labelledby="q">'+
+          '<button class="act" data-act="still">Still works</button>'+
+          '<button class="act" data-act="reschedule">Reschedule</button>'+
+          '<button class="act" data-act="cancel">Cancel appointment</button>'+
+          '<div><button class="act" data-act="contact" aria-describedby="helper">Contact the practice</button>'+
+          '<p class="helper" id="helper">If you feel worse, have a new question, or need a different kind of appointment</p></div>'+
+        '</div>'+
+        '<div class="later"><button class="linkbtn" id="later" aria-expanded="false" aria-controls="later-opts">Remind me later</button>'+
+        '<div class="later-opts" id="later-opts" hidden><button data-later="tomorrow">Tomorrow</button><button data-later="3">In 3 days</button></div></div>'+
+        (AI_LABEL_TOP?'':ai)+
+        (showTiming?'<div class="timing" id="timing" role="group" aria-labelledby="tq"><p id="tq">Was this a good time to hear from us?</p>'+
+          '<div class="opts"><button data-t>Earlier</button><button data-t>Good</button><button data-t>Later</button></div></div>':'')+
+      '</article>';
+    wireCard(p);
+  }
+  function wireCard(p){
+    var more=document.getElementById("more");
+    if(more) more.onclick=function(){var t=document.getElementById("note-text");var open=t.classList.toggle("clamp2")===false;more.textContent=open?"Show less":"Show more";more.setAttribute("aria-expanded",String(open));};
+    var add=$screen.querySelector(".add-note"); if(add) add.onclick=function(){announce("Adding a note is not part of this prototype.");};
+    $screen.querySelectorAll("[data-act]").forEach(function(btn){btn.onclick=function(){action(btn.dataset.act,p);};});
+    var later=document.getElementById("later"), lo=document.getElementById("later-opts");
+    later.onclick=function(){lo.hidden=!lo.hidden;later.setAttribute("aria-expanded",String(!lo.hidden));if(!lo.hidden)lo.querySelector("button").focus();};
+    lo.querySelectorAll("button").forEach(function(b){b.onclick=function(){message(b.dataset.later==="tomorrow"?"We’ll remind you tomorrow.":"We’ll remind you in 3 days.");};});
+    $screen.querySelectorAll("[data-settings]").forEach(function(b){b.onclick=function(){openSheet(p,b);};});
+    $screen.querySelectorAll("[data-t]").forEach(function(b){b.onclick=function(){
+      var box=document.getElementById("timing");box.innerHTML='<p class="done" tabindex="-1">Thank you, we’ll use this for your next check-ins.</p>';box.firstChild.focus();};});
+  }
+
+  // ---------- appointment summary card (as in the booking flow) ----------
+  function initials(n){return n.replace(/^Dr\.\s*/,"").split(" ").map(function(x){return x[0];}).join("").slice(0,2);}
+  function summaryCard(b,day,time){
+    return '<div class="card sum">'+
+      '<div class="sum-top"><span class="avatar" aria-hidden="true">'+esc(initials(b.practitioner_name))+'</span>'+
+      '<div><p class="sum-name">'+esc(b.practitioner_name)+'</p><p class="sum-spec">'+esc(b.specialty)+'</p></div></div>'+
+      '<ul class="facts sum-facts">'+
+        '<li>'+ICON.cal+'<span>'+long(day)+', '+esc(time)+'</span></li>'+
+        '<li>'+ICON.pin+'<span>'+esc(b.practice_name)+'</span></li>'+
+        '<li>'+ICON.svc+'<span>'+esc(b.service)+'</span></li>'+
+      '</ul></div>';
+  }
+  var CLOCK='<svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 6.5V10l2.5 1.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  var REBOOK='<svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 8A6 6 0 0 0 4.6 6.5M4.5 12a6 6 0 0 0 10.9 1.5M4.5 3.5v3h3M15.5 16.5v-3h-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function cancelledCard(b,day,time){
+    return '<div class="card appt cancelled">'+
+      '<div class="appt-head"><span class="appt-when">'+ICON.cal+'<span class="nw">'+long(day)+'</span><span class="nw">'+CLOCK+esc(time)+'</span></span>'+
+      '<span class="appt-status">Cancelled</span></div>'+
+      '<div class="sum-top"><span class="avatar" aria-hidden="true">'+esc(initials(b.practitioner_name))+'</span>'+
+      '<div><p class="sum-name">'+esc(b.practitioner_name)+'</p><p class="sum-spec">'+esc(b.specialty)+'</p></div></div>'+
+      '<ul class="facts sum-facts"><li>'+ICON.svc+'<span>'+esc(b.service)+'</span></li></ul>'+
+      '<button class="appt-link" id="bookagain">'+REBOOK+'<span>Book again</span></button></div>';
+  }
+  function reviewReschedule(p,day,time,mode){
+    var b=p.booking, appt=d(b.appointment_date), book=mode==="book";
+    clearTimers(); current.view="msg"; bar("My appointments",true);
+    $screen.innerHTML='<div class="msg"><h2>'+(book?'Confirm your appointment':'Confirm your new time')+'</h2>'+
+      (book?'':'<p>Your current appointment: '+long(appt)+', '+esc(b.appointment_time)+'</p>')+summaryCard(b,day,time)+
+      '<button class="primary" id="cfnew">'+(book?'Confirm booking':'Confirm new time')+'</button>'+
+      '<button class="secondary" id="other">Choose a different time</button></div>';
+    document.getElementById("cfnew").onclick=function(){message((book?"Your appointment is booked for ":"Your appointment is moved to ")+long(day)+", "+time+".",summaryCard(b,day,time));};
+    document.getElementById("other").onclick=function(){action("reschedule",p,mode);};
+    focusScreen();
+  }
+
+  // ---------- follow-up screens ----------
+  function message(title,extraHtml){
+    clearTimers(); current.view="msg";
+    bar("My appointments",true);
+    $screen.innerHTML='<div class="msg"><h2>'+title+'</h2>'+(extraHtml||'')+
+      '<button class="secondary" id="home">Back to my appointments</button></div>';
+    document.getElementById("home").onclick=function(){renderCard(current.variant);};
+    focusScreen();
+  }
+  function action(a,p,mode){
+    var b=p.booking, appt=d(b.appointment_date);
+    if(a==="still") return message("Great, see you on "+short(appt)+" at "+esc(b.appointment_time)+".",summaryCard(b,appt,b.appointment_time));
+    if(a==="cancel") return confirmCancel(p);
+    if(a==="contact") return message(esc(b.practice_name),
+      '<p><a href="tel:+493012345678">030 1234 5678</a></p>'+
+      '<button class="secondary" id="msgbtn">Send a message</button>'+
+      '<div class="urgent"><p>If it can’t wait: call <a href="tel:116117">116117</a>. In an emergency: <a href="tel:112">112</a>.</p></div>');
+    if(a==="reschedule"){
+      clearTimers(); current.view="msg"; bar("My appointments",true);
+      var POOL=[["8:00","8:30","9:15","9:45","10:30","11:15","13:00","14:30","16:00"],
+                ["9:00","9:30","10:15","11:00","11:45","12:30","14:00","15:15","17:00"],
+                ["8:15","9:00","10:00","10:45","13:30","14:15","15:00","16:30","17:15"]];
+      var earlier=[3,9].map(function(k){return k-p.checkin_days_before;}).filter(function(o){return o<0;});
+      var offsets=earlier.concat([2,7,9,13,16,20,23,27,30,34,37,41,44,48]), shown=0;
+      var CHEV='<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      function slotBtns(label,times,idx){return times.map(function(t){return '<button data-slot="'+idx+'|'+t+'">'+t+'</button>';}).join("");}
+      function dayBlock(i,day,times,open){
+        var label=long(day), id="day"+i;
+        return '<div class="acc"><h3><button class="acc-h" aria-expanded="'+open+'" aria-controls="'+id+'">'+label+CHEV+'</button></h3>'+
+          '<div class="acc-b" id="'+id+'"'+(open?'':' hidden')+'><div class="slots">'+slotBtns(label,times.slice(0,6),i)+'</div>'+
+          '<div class="slots extra" hidden>'+slotBtns(label,times.slice(6),i)+'</div>'+
+          '<button class="acc-more">More times</button></div></div>';
+      }
+      $screen.innerHTML='<div class="msg"><h2>'+(mode==="book"?'Choose a time':'Choose a new time')+'</h2>'+(mode==="book"?'':'<p>Your current appointment: '+long(appt)+', '+esc(b.appointment_time)+'</p>')+'<div id="days"></div>'+
+        '<button class="secondary" id="moredates">Show more dates</button>'+
+        '<button class="secondary" id="home">Back to my appointments</button></div>';
+      function addDays(n){
+        var box=document.getElementById("days"), html="", first=shown;
+        for(var i=0;i<n&&shown<offsets.length;i++,shown++){var day=new Date(appt);day.setDate(day.getDate()+offsets[shown]);html+=dayBlock(shown,day,POOL[shown%POOL.length],shown===0);}
+        box.insertAdjacentHTML("beforeend",html);
+        var blocks=box.querySelectorAll(".acc");
+        for(var j=first;j<blocks.length;j++) wireDay(blocks[j]);
+        if(shown>=offsets.length) document.getElementById("moredates").hidden=true;
+        return blocks[first];
+      }
+      function wireDay(block){
+        var h=block.querySelector(".acc-h"), body=block.querySelector(".acc-b"), more=block.querySelector(".acc-more"), extra=block.querySelector(".extra");
+        h.onclick=function(){var open=h.getAttribute("aria-expanded")==="true";h.setAttribute("aria-expanded",String(!open));body.hidden=open;};
+        more.onclick=function(){extra.hidden=false;more.remove();extra.querySelector("button").focus();};
+        block.querySelectorAll("[data-slot]").forEach(function(x){x.onclick=function(){
+          var parts=x.dataset.slot.split("|"), day=new Date(appt); day.setDate(day.getDate()+offsets[+parts[0]]);
+          reviewReschedule(p,day,parts[1],mode);};});
+      }
+      addDays(earlier.length+3);
+      document.getElementById("moredates").onclick=function(){var firstNew=addDays(3);if(firstNew)firstNew.querySelector(".acc-h").focus();};
+      document.getElementById("home").onclick=function(){renderCard(current.variant);};
+      focusScreen();
+    }
+  }
+  function confirmCancel(p){
+    var b=p.booking, appt=d(b.appointment_date), trigger=document.activeElement;
+    lastTrigger=trigger;
+    $overlay.innerHTML='<div class="scrim" id="scrim"><div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="cx" aria-describedby="cxd">'+
+      '<h2 id="cx" tabindex="-1">Cancel your appointment on '+short(appt)+'?</h2>'+
+      '<p id="cxd">'+esc(b.service)+', '+long(appt)+', '+esc(b.appointment_time)+'</p>'+
+      '<button class="primary" id="cxyes">Cancel appointment</button>'+
+      '<button class="secondary" id="cxno">Keep appointment</button></div></div>';
+    document.getElementById("cx").focus();
+    document.getElementById("cxno").onclick=function(){closeSheet();};
+    document.getElementById("cxyes").onclick=function(){lastTrigger=null;$overlay.innerHTML="";message("Your appointment on "+short(appt)+" is cancelled. Thank you for letting us know early, so someone else can use this slot.",cancelledCard(b,appt,b.appointment_time));
+      document.getElementById("bookagain").onclick=function(){action("reschedule",p,"book");};};
+    document.getElementById("scrim").onclick=function(e){if(e.target.id==="scrim")closeSheet();};
+  }
+  // msg button inside contact screen
+  document.addEventListener("click",function(e){if(e.target&&e.target.id==="msgbtn")announce("Messaging is not part of this prototype.");});
+
+  // ---------- settings sheet ----------
+  var lastTrigger=null;
+  function openSheet(p,trigger){
+    lastTrigger=trigger;
+    var cur = p.reason_code==="ai_off" ? "two" : "ai";
+    var weeks = rel(p.checkin_days_before);
+    var opts=[
+      ["ai","Let AI adjust the timing","Based on when you usually act on appointments. Currently "+weeks+" ahead."],
+      ["two","Always 2 weeks before the appointment","No AI. The same timing for every appointment."],
+      ["own","Choose my own timing","Pick how many days or weeks ahead."],
+      ["off","Don’t send check-ins","You will still get the day-before reminder."]
+    ];
+    $overlay.innerHTML='<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="st">'+
+      '<h2 id="st" tabindex="-1">Check-in settings</h2>'+
+      '<p>Check-ins ask if your appointment still works for you, ahead of the date. Your day-before reminder stays the same.</p>'+
+      '<fieldset style="border:0;margin:0;padding:0"><legend class="sr-only">When should we check in?</legend>'+
+      opts.map(function(o){var isAi=o[0]==="ai";return '<label class="opt'+(isAi?' ai-opt':'')+'"><input type="radio" name="ck" value="'+o[0]+'"'+(o[0]===cur?' checked':'')+'><span><b>'+o[1]+(o[0]===cur?' (current)':'')+'</b><span>'+o[2]+'</span></span>'+(isAi?'<span class="tag corner" aria-hidden="true">AI</span>':'')+'</label>';}).join("")+
+      '</fieldset><button class="primary" id="save">Save</button></div></div>';
+    document.getElementById("st").focus();
+    document.getElementById("save").onclick=function(){closeSheet();announce("Check-in settings saved.");};
+    document.getElementById("scrim").onclick=function(e){if(e.target.id==="scrim")closeSheet();};
+  }
+  function closeSheet(){ if($overlay.innerHTML){$overlay.innerHTML=""; if(lastTrigger&&document.body.contains(lastTrigger))lastTrigger.focus();} }
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape")closeSheet();
+    if(e.key==="Tab"){
+      var dlg=$overlay.querySelector(".sheet"); if(!dlg) return;
+      var f=Array.prototype.filter.call(dlg.querySelectorAll("button, input:checked, a[href]"),function(x){return x.offsetParent!==null;});
+      if(!f.length) return;
+      var first=f[0], last=f[f.length-1];
+      if(!dlg.contains(document.activeElement)){e.preventDefault();first.focus();}
+      else if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    }
+  });
+
+  // ---------- lock-screen notification (entry point for check-in states) ----------
+  function renderLock(v){
+    clearTimers(); closeSheet(); current={view:"lock",variant:v}; setPressed(v);
+    var p=cardPayload(v), ck=minus(p.booking.appointment_date,p.checkin_days_before), appt=d(p.booking.appointment_date);
+    var text="Your appointment on "+short(appt)+" is coming up. Does it still work for you?";
+    $bar.hidden=true; $bar.innerHTML="";
+    $screen.className="screen lockscreen";
+    $screen.innerHTML='<h2 class="sr-only">Lock screen</h2><p class="lk-date">'+long(ck)+'</p><p class="lk-time" aria-hidden="true">9:41</p>'+
+      '<button class="notif" id="notif" aria-label="Doctolib notification: '+text+'">'+
+        '<span class="app-ic">'+ICON.cal+'</span>'+
+        '<span><span class="meta"><span>Doctolib</span><span>now</span></span><span class="txt">'+text+'</span></span>'+
+      '</button>';
+    document.getElementById("notif").onclick=function(){renderCard(v);focusScreen();};
+  }
+
+  // ---------- booking confirmation: waiting, ready, failure ----------
+  function renderBooking(slow){
+    clearTimers(); closeSheet(); current={view:"booking",variant:"high"}; setPressed(slow==="long"?"booking-long":slow?"booking-slow":"booking");
+    var b=BOOKING_DERM, appt=d(b.appointment_date);
+    bar("Booking",false);
+    $screen.innerHTML=
+      '<div class="confirmed"><span class="ok">'+ICON.ok+'</span><h2 style="margin:0;font-size:22px">Appointment confirmed</h2></div>'+
+      '<div class="card card-pad"><ul class="facts" style="margin:0">'+
+        '<li>'+ICON.svc+'<span>'+esc(b.specialty)+': '+esc(b.service)+'</span></li>'+
+        '<li>'+ICON.cal+'<span>'+long(appt)+', '+esc(b.appointment_time)+'</span></li>'+
+        '<li>'+ICON.pin+'<span class="clamp2">'+esc(b.practice_name)+'</span></li></ul></div>'+
+      '<section class="checkin-line" id="ckline" aria-live="polite"></section>'+
+      '<button class="primary" id="done">Done</button>';
+    document.getElementById("done").onclick=function(){renderUpcoming();};
+    var line=document.getElementById("ckline");
+    // 0 to 1 s: nothing shown yet
+    timers.push(setTimeout(function(){
+      line.innerHTML='<div class="status-row"><span class="tag" aria-label="AI">AI</span><div style="flex:1"><h3>Planning your check-in…</h3>'+
+        '<p>Usually takes a few seconds. Your booking is already confirmed.</p><div class="sk w1"></div><div class="sk w2"></div>'+
+        '<p id="cancelwrap"></p></div></div>';
+    },1000));
+    if(!slow){
+      timers.push(setTimeout(function(){
+        var p=P.high, ck=minus(b.appointment_date,p.checkin_days_before);
+        line.innerHTML='<div class="status-row"><span class="tag" aria-label="AI">AI</span><div><h3>Check-in planned</h3>'+
+          '<p class="lead">We’ll check in with you around '+short(ck)+', '+rel(p.checkin_days_before)+' before, to see if this still works for you.</p>'+
+          '<p>Based on when you usually act on appointments. <button class="linkbtn" data-settings style="min-height:0">Check-in settings</button></p></div></div>';
+        line.querySelector("[data-settings]").onclick=function(e){openSheet(p,e.target);};
+      },3000));
+      return;
+    }
+    timers.push(setTimeout(function(){
+      var w=document.getElementById("cancelwrap");
+      if(w){w.innerHTML='<button class="linkbtn" id="usestd">Use standard timing</button>';document.getElementById("usestd").onclick=function(){clearTimers();standard(line,false);};}
+    },5000));
+    if(slow!=="long") timers.push(setTimeout(function(){standard(line,true);},10000));
+  }
+  function standard(line,failed){
+    var ck=minus(BOOKING_DERM.appointment_date,14);
+    line.innerHTML='<h3>Check-in planned</h3><p class="lead">We’ll check in with you around '+short(ck)+', 2 weeks before, as standard.</p>'+
+      (failed?'<p>We couldn’t plan a personal time just now. Your booking is confirmed.</p>':'');
+  }
+  function renderUpcoming(){
+    clearTimers(); bar("My appointments",false);
+    var b=BOOKING_DERM, appt=d(b.appointment_date);
+    $screen.innerHTML='<h2>Upcoming</h2><div class="card card-pad"><ul class="facts" style="margin:0">'+
+      '<li>'+ICON.svc+'<span>'+esc(b.specialty)+': '+esc(b.service)+'</span></li>'+
+      '<li>'+ICON.cal+'<span>'+long(appt)+', '+esc(b.appointment_time)+'</span></li>'+
+      '<li>'+ICON.pin+'<span class="clamp2">'+esc(b.practice_name)+'</span></li></ul></div>';
+    focusScreen();
+  }
+
+  // ---------- routing ----------
+  var ROUTES={"high":1,"long":1,"low":1,"no-result":1,"cold-start":1,"ai-off":1,"booking":1,"booking-slow":1,"booking-long":1};
+  function route(){
+    var h=(location.hash||"").replace("#","");
+    if(h.indexOf("lock-")===0 && ROUTES[h.slice(5)] && h.slice(5).indexOf("booking")!==0) return renderLock(h.slice(5));
+    if(!ROUTES[h]) h="lock-high";
+    if(h==="lock-high") return renderLock("high");
+    if(h==="booking") renderBooking(false);
+    else if(h==="booking-slow") renderBooking(true);
+    else if(h==="booking-long") renderBooking("long");
+    else renderCard(h);
+  }
+  document.querySelectorAll(".proto button[data-go]").forEach(function(btn){
+    btn.onclick=function(){
+      var go=btn.dataset.go, lock=document.getElementById("lockstart").checked && go.indexOf("booking")!==0;
+      var target=(lock?"lock-":"")+go;
+      if(location.hash==="#"+target) route(); else location.hash=target;
+    };
+  });
+  window.addEventListener("hashchange",route);
+  route();
+})();
+</script>
+</body>
+</html>
