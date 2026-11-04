@@ -47,13 +47,17 @@ a{color:var(--brand)}
 
 /* prototype controls, outside the phone: sidebar right of the phone, stacked above it on narrow screens */
 .layout{display:flex;justify-content:center;align-items:flex-start;gap:24px;padding:16px}
-.proto{width:260px;flex:none;position:sticky;top:16px}
+.proto{width:320px;flex:none;position:sticky;top:16px}
 .proto details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
 .proto summary{cursor:pointer;font-weight:500;min-height:44px;display:flex;align-items:center}
 .proto .group{margin:6px 0 10px}
 .proto .group p{margin:4px 0 6px;font-size:14px;color:var(--ink-2)}
 .proto .row{display:flex;flex-direction:column;gap:8px}
 .proto .row button{min-height:44px;width:100%;box-sizing:border-box;text-align:left;padding:0 14px;border:1px solid var(--control);background:var(--surface);border-radius:22px;cursor:pointer;font-size:15px}
+.proto .desc-box{margin:10px 0 4px;padding:10px 12px;border-radius:10px;background:var(--soft)}
+.proto .desc-box[hidden]{display:none}
+.proto .desc-box p{margin:0;font-size:14px;color:var(--ink-2)}
+.proto .desc-box .desc-title{font-weight:500;color:var(--ink);margin-bottom:2px}
 .proto .row button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 
 /* phone */
@@ -66,9 +70,16 @@ a{color:var(--brand)}
 .statusbar .sb-icons{display:flex;gap:6px;align-items:center}
 .homebar{flex:none;height:34px;display:grid;place-items:center;background:var(--surface)}
 .homebar::before{content:"";width:134px;height:5px;border-radius:3px;background:var(--ink)}
-.phone.locked .statusbar{background:#22344D;color:#FFFFFF}
+/* lock screen wallpaper: soft glow and waves, dark blue to dark purple (same in light and dark mode) */
+.phone.locked{background:
+  radial-gradient(90% 40% at 20% 0%,rgba(150,180,220,.28),transparent 70%),
+  radial-gradient(120% 28% at 85% 64%,rgba(200,220,242,.7),transparent 70%),
+  radial-gradient(130% 24% at 10% 74%,rgba(170,190,235,.5),transparent 70%),
+  radial-gradient(140% 30% at 60% 90%,rgba(110,80,170,.55),transparent 70%),
+  linear-gradient(170deg,#0D1B45 0%,#16245A 38%,#5A5C98 58%,#3A2D63 82%,#251B42 100%)}
+.phone.locked .statusbar{background:transparent;color:#FFFFFF}
 .phone.locked .statusbar .sb-time{visibility:hidden}
-.phone.locked .homebar{background:#101C2C}
+.phone.locked .homebar{background:transparent}
 .phone.locked .homebar::before{background:#FFFFFF}
 .appbar{flex:none;background:var(--brand);color:var(--brand-ink);padding:18px 16px 16px;display:flex;align-items:center;gap:8px;min-height:64px}
 .appbar h1{color:var(--brand-ink);font-size:18px;font-weight:600}
@@ -153,14 +164,14 @@ a{color:var(--brand)}
 .appbar[hidden]{display:none}
 .toggle{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px;cursor:pointer}
 .toggle input{width:20px;height:20px;accent-color:var(--brand)}
-.lockscreen{background:linear-gradient(180deg,#22344D,#101C2C);color:#FFFFFF;padding:56px 14px 28px;text-align:center}
-.lockscreen .lk-date{margin:0;font-size:17px;font-weight:500;color:#D9E3EE}
+.lockscreen{background:transparent;color:#FFFFFF;padding:56px 14px 28px;text-align:center}
+.lockscreen .lk-date{margin:0;font-size:17px;font-weight:500;color:#FFFFFF}
 .lockscreen .lk-time{margin:0 0 36px;font-family:Montserrat,"Helvetica Neue",Arial,sans-serif;font-size:76px;font-weight:600;line-height:1.1;color:#FFFFFF}
-.notif{display:grid;grid-template-columns:38px 1fr;gap:10px;width:100%;text-align:left;background:rgba(255,255,255,.92);color:#0F2E57;border:0;border-radius:18px;padding:12px 14px;cursor:pointer}
+.notif{display:grid;grid-template-columns:38px 1fr;gap:10px;width:100%;text-align:left;background:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);color:#0F2E57;border:0;border-radius:18px;padding:12px 14px;cursor:pointer}
 .notif .app-ic{width:38px;height:38px;border-radius:9px;background:#0B6CB5;color:#FFFFFF;display:grid;place-items:center}
 .notif .meta{display:flex;justify-content:space-between;font-size:13px;color:#4A5F7A;margin-bottom:2px}
 .notif .txt{font-size:15px;line-height:1.35;color:#0F2E57}
-.lk-hint{margin:16px 0 0;font-size:14px;color:#D9E3EE}
+.lk-hint{margin:16px 0 0;font-size:14px;color:#FFFFFF}
 /* message screens */
 .msg{padding-top:24px}
 .msg h2{font-size:21px;line-height:1.3;margin-bottom:8px}
@@ -210,26 +221,27 @@ a{color:var(--brand)}
   <details open>
     <summary>Prototype: choose a state</summary>
     <label class="toggle"><input type="checkbox" id="lockstart" checked> Start check-in states from the lock-screen notification</label>
+    <div class="desc-box" id="desc-box" aria-live="polite" hidden><p class="desc-title" id="desc-title"></p><p id="desc-text"></p></div>
     <div class="group">
       <p>Check-in card (arrives before the appointment)</p>
       <div class="row" id="card-states">
-        <button data-go="high">High confidence</button>
-        <button data-go="low">Low confidence</button>
-        <button data-go="no-result">No result</button>
-        <button data-go="cold-start">Cold start</button>
-        <button data-go="ai-off">AI off</button>
+        <button data-go="high" data-desc="AI found a clear pattern and checks in 3 weeks ahead instead of 2. No timing question.">High confidence</button>
+        <button data-go="low" data-desc="AI sees a mixed pattern and checks in a few days earlier (17 days). Asks if the timing was good.">Low confidence</button>
+        <button data-go="no-result" data-desc="AI found no pattern yet, so it uses the standard 2 weeks. The AI tag is still shown.">No result</button>
+        <button data-go="cold-start" data-desc="Fewer than 3 appointments so far. Standard 2 weeks, plus the timing question.">Cold start</button>
+        <button data-go="ai-off" data-desc="Patient didn’t allow AI timing. Standard 2 weeks, no AI tag, with an option to turn it on.">AI off</button>
       </div>
     </div>
     <div class="group">
       <p>Stress test (not for testers)</p>
-      <div class="row"><button data-go="long">Longest content</button></div>
+      <div class="row"><button data-go="long" data-desc="The longest allowed texts, to check the layout holds. Not for testers.">Longest content</button></div>
     </div>
     <div class="group">
       <p>Booking confirmation (right after booking)</p>
       <div class="row" id="booking-states">
-        <button data-go="booking">Waiting, then ready</button>
-        <button data-go="booking-slow">Waiting, then failure</button>
-        <button data-go="booking-long">Waiting (long)</button>
+        <button data-go="booking" data-desc="AI plans the check-in right after booking: loading lines first, then the planned date.">Waiting, then ready</button>
+        <button data-go="booking-slow" data-desc="Planning takes too long (10&nbsp;s), so it falls back to the standard 2 weeks with a message.">Waiting, then failure</button>
+        <button data-go="booking-long" data-desc="Planning never finishes, to test the waiting screen. “Use standard timing” appears after 5&nbsp;s.">Waiting (long)</button>
       </div>
     </div>
   </details>
@@ -315,6 +327,8 @@ a{color:var(--brand)}
   }
   function setPressed(name){
     document.querySelectorAll(".proto button[data-go]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.go===name));});
+    var sel=document.querySelector('.proto button[data-go="'+name+'"]'), box=document.getElementById("desc-box");
+    box.hidden=!sel; if(sel){document.getElementById("desc-title").textContent=sel.textContent;document.getElementById("desc-text").textContent=sel.dataset.desc;}
   }
   function focusScreen(){var h=$screen.querySelector("h2");(h||$screen).setAttribute("tabindex","-1");(h||$screen).focus();}
 
