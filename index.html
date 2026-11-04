@@ -444,11 +444,11 @@ a{color:var(--brand)}
   }
 
   // ---------- follow-up screens ----------
-  function message(title,extraHtml){
+  function message(title,extraHtml,homeSecondary){
     clearTimers(); current.view="msg";
     bar("My appointments",true);
     $screen.innerHTML='<div class="msg"><h2>'+title+'</h2>'+(extraHtml||'')+
-      '<button class="secondary" id="home">Back to my appointments</button></div>';
+      '<button class="'+(homeSecondary?'secondary':'primary')+'" id="home">Back to my appointments</button></div>';
     document.getElementById("home").onclick=function(){renderCard(current.variant);};
     focusScreen();
   }
@@ -474,7 +474,7 @@ a{color:var(--brand)}
     if(a==="contact"){
       message(esc(b.practice_name),
         '<p><a href="tel:+493012345678">030 1234 5678</a></p>'+
-        '<button class="primary" id="msgbtn">Send a message</button>'+URGENT);
+        '<button class="primary" id="msgbtn">Send a message</button>'+URGENT,true);
       document.getElementById("msgbtn").onclick=function(){composeMessage(p);};
       return;
     }
