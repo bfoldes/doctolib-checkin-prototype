@@ -12,7 +12,7 @@
   --brand:#0B6CB5; --brand-ink:#FFFFFF;
   --ink:#0F2E57; --ink-2:#4A5F7A;
   --bg:#EEF3F8; --surface:#FFFFFF; --soft:#E6F5FC; --muted-surface:#F2F5F9;
-  --line:#C7D5E3; --control:#6B7F95; --focus:#0B6CB5;
+  --line:#C7D5E3; --control:#6B7F95; --focus:#0B6CB5; --error:#B3261E;
   --skeleton:#DCE5EE; --chip:#0F2E57; --chip-ink:#FFFFFF;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -24,7 +24,7 @@
     --brand:#7CC0F0; --brand-ink:#0E1A2A;
     --ink:#E8EEF5; --ink-2:#A9B8C9;
     --bg:#0E1A2A; --surface:#152234; --soft:#1B3550; --muted-surface:#1B2A3F;
-    --line:#2C3F57; --control:#8299B5; --focus:#7CC0F0;
+    --line:#2C3F57; --control:#8299B5; --focus:#7CC0F0; --error:#FFB4AB;
     --skeleton:#24364D; --chip:#E8EEF5; --chip-ink:#0E1A2A;
   }
 }
@@ -33,7 +33,7 @@
   --brand:#7CC0F0; --brand-ink:#0E1A2A;
   --ink:#E8EEF5; --ink-2:#A9B8C9;
   --bg:#0E1A2A; --surface:#152234; --soft:#1B3550; --muted-surface:#1B2A3F;
-  --line:#2C3F57; --control:#8299B5; --focus:#7CC0F0;
+  --line:#2C3F57; --control:#8299B5; --focus:#7CC0F0; --error:#FFB4AB;
   --skeleton:#24364D; --chip:#E8EEF5; --chip-ink:#0E1A2A;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -204,7 +204,11 @@ a{color:var(--brand)}
 .toast{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:var(--soft)}
 .own-when{margin:-2px 0 10px;padding:0 12px}
 .own-when label{display:block;font-weight:500;margin-bottom:6px}
-.own-when select{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--control);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;cursor:pointer}
+.own-when select,.own-when input{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--control);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;cursor:pointer}
+.own-when input{cursor:text}
+.own-when .own-days{margin-top:12px}
+.own-when input[aria-invalid="true"]{border:2px solid var(--error)}
+.own-when .field-err{margin:6px 0 0;color:var(--error);font-size:16px;font-weight:500}
 .toast.saved{margin:10px 0 0}
 .list-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
 </style>
@@ -528,15 +532,27 @@ a{color:var(--brand)}
       '<fieldset style="border:0;margin:0;padding:0"><legend class="sr-only">When should we check in?</legend>'+
       opts.map(function(o){var isAi=o[0]==="ai";return '<label class="opt'+(isAi?' ai-opt':'')+'"><input type="radio" name="ck" value="'+o[0]+'"'+(o[0]===cur?' checked':'')+'><span><b>'+o[1]+(o[0]===cur?' (current)':'')+'</b><span>'+o[2]+'</span></span>'+(isAi?'<span class="tag corner" aria-hidden="true">AI</span>':'')+'</label>'+
         (o[0]==="own"?'<div class="own-when" id="ownwhen"'+(cur==="own"?'':' hidden')+'><label for="ownweeks">How long before the appointment?</label><select id="ownweeks">'+
-          [1,2,3,4].map(function(n){return '<option value="'+n+'"'+(n===3?' selected':'')+'>'+n+(n===1?' week':' weeks')+'</option>';}).join("")+'</select></div>':'');}).join("")+
+          [["7","1 week"],["10","10 days"],["14","2 weeks"],["21","3 weeks"],["28","4 weeks"],["custom","Custom"]].map(function(w){return '<option value="'+w[0]+'"'+(w[0]==="21"?' selected':'')+'>'+w[1]+'</option>';}).join("")+'</select>'+
+          '<div class="own-days" id="owndays" hidden><label for="owndaysin">Days before the appointment</label><input type="number" id="owndaysin" inputmode="numeric" min="7" max="28" step="1">'+
+          '<p class="field-err" id="owndayserr" hidden>Choose between 7 and 28 days</p></div></div>':'');}).join("")+
       '</fieldset><button class="primary" id="save">Save</button></div></div>';
     document.getElementById("st").focus();
     var ownWhen=document.getElementById("ownwhen");
     $overlay.querySelectorAll('input[name="ck"]').forEach(function(r){r.onchange=function(){ownWhen.hidden=r.value!=="own";};});
+    var sel=document.getElementById("ownweeks"), daysIn=document.getElementById("owndaysin"), daysErr=document.getElementById("owndayserr");
+    function setDaysErr(on){daysErr.hidden=!on;daysIn.setAttribute("aria-invalid",String(on));if(on)daysIn.setAttribute("aria-describedby","owndayserr");else daysIn.removeAttribute("aria-describedby");}
+    sel.onchange=function(){document.getElementById("owndays").hidden=sel.value!=="custom";};
+    daysIn.oninput=function(){if(!daysErr.hidden)setDaysErr(false);};
     document.getElementById("save").onclick=function(){
       var choice=$overlay.querySelector('input[name="ck"]:checked');
       if(!choice||choice.value!=="own"){closeSheet();announce("Check-in settings saved.");return;}
-      var sel=document.getElementById("ownweeks"), msg="Saved. We’ll check in "+sel.options[sel.selectedIndex].text+" before your appointments.", host=lastTrigger&&lastTrigger.closest("div");
+      var when=sel.options[sel.selectedIndex].text;
+      if(sel.value==="custom"){
+        var v=daysIn.value.trim(), n=Number(v);
+        if(!/^\d+$/.test(v)||n<7||n>28){setDaysErr(true);daysIn.focus();return;}
+        when=n+" days";
+      }
+      var msg="Saved. We’ll check in "+when+" before your appointments.", host=lastTrigger&&lastTrigger.closest("div");
       closeSheet();
       if(host&&document.body.contains(host)){var old=$screen.querySelector(".toast.saved");if(old)old.remove();var t=document.createElement("p");t.className="toast saved";t.textContent=msg;host.insertAdjacentElement("afterend",t);}
       announce(msg);
@@ -548,7 +564,7 @@ a{color:var(--brand)}
     if(e.key==="Escape")closeSheet();
     if(e.key==="Tab"){
       var dlg=$overlay.querySelector(".sheet"); if(!dlg) return;
-      var f=Array.prototype.filter.call(dlg.querySelectorAll("button, input:checked, select, a[href]"),function(x){return x.offsetParent!==null;});
+      var f=Array.prototype.filter.call(dlg.querySelectorAll("button, input:checked, input[type=number], select, a[href]"),function(x){return x.offsetParent!==null;});
       if(!f.length) return;
       var first=f[0], last=f[f.length-1];
       if(!dlg.contains(document.activeElement)){e.preventDefault();first.focus();}
