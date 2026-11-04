@@ -202,7 +202,8 @@ a{color:var(--brand)}
 .opt b{font-weight:500;display:block}
 .opt span{font-size:14px;color:var(--ink-2)}
 .toast{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:var(--soft)}
-.own-when{margin:-2px 0 10px}
+.own-when{margin:0 0 10px;padding:2px 12px 14px 48px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px}
+.opt.own-open{margin-bottom:0;border-bottom:0;border-radius:10px 10px 0 0}
 .own-when label{display:block;font-size:14px;font-weight:500;color:var(--ink-2);margin-bottom:6px}
 .own-when select,.own-when input{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--control);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;cursor:pointer}
 .own-when select{appearance:none;-webkit-appearance:none;padding-right:44px;background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);background-position:calc(100% - 22px) 50%,calc(100% - 16px) 50%;background-size:6px 6px;background-repeat:no-repeat}
@@ -531,7 +532,7 @@ a{color:var(--brand)}
       '<h2 id="st" tabindex="-1">Check-in settings</h2>'+
       '<p>Check-ins ask if your appointment still works for you, ahead of the date. Your day-before reminder stays the same.</p>'+
       '<fieldset style="border:0;margin:0;padding:0"><legend class="sr-only">When should we check in?</legend>'+
-      opts.map(function(o){var isAi=o[0]==="ai";return '<label class="opt'+(isAi?' ai-opt':'')+'"><input type="radio" name="ck" value="'+o[0]+'"'+(o[0]===cur?' checked':'')+'><span><b>'+o[1]+(o[0]===cur?' (current)':'')+'</b><span>'+o[2]+'</span></span>'+(isAi?'<span class="tag corner" aria-hidden="true">AI</span>':'')+'</label>'+
+      opts.map(function(o){var isAi=o[0]==="ai";return '<label class="opt'+(isAi?' ai-opt':'')+(o[0]==="own"&&cur==="own"?' own-open':'')+'"><input type="radio" name="ck" value="'+o[0]+'"'+(o[0]===cur?' checked':'')+'><span><b>'+o[1]+(o[0]===cur?' (current)':'')+'</b><span>'+o[2]+'</span></span>'+(isAi?'<span class="tag corner" aria-hidden="true">AI</span>':'')+'</label>'+
         (o[0]==="own"?'<div class="own-when" id="ownwhen"'+(cur==="own"?'':' hidden')+'><label for="ownweeks">How long before the appointment?</label><select id="ownweeks">'+
           [["7","1 week"],["10","10 days"],["14","2 weeks"],["21","3 weeks"],["28","4 weeks"],["custom","Custom"]].map(function(w){return '<option value="'+w[0]+'"'+(w[0]==="21"?' selected':'')+'>'+w[1]+'</option>';}).join("")+'</select>'+
           '<div class="own-days" id="owndays" hidden><label for="owndaysin">Days before the appointment</label><input type="number" id="owndaysin" inputmode="numeric" min="7" max="28" step="1">'+
@@ -539,7 +540,7 @@ a{color:var(--brand)}
       '</fieldset><button class="primary" id="save">Save</button></div></div>';
     document.getElementById("st").focus();
     var ownWhen=document.getElementById("ownwhen");
-    $overlay.querySelectorAll('input[name="ck"]').forEach(function(r){r.onchange=function(){ownWhen.hidden=r.value!=="own";};});
+    $overlay.querySelectorAll('input[name="ck"]').forEach(function(r){r.onchange=function(){ownWhen.hidden=r.value!=="own";ownWhen.previousElementSibling.classList.toggle("own-open",!ownWhen.hidden);};});
     var sel=document.getElementById("ownweeks"), daysIn=document.getElementById("owndaysin"), daysErr=document.getElementById("owndayserr");
     function setDaysErr(on){daysErr.hidden=!on;daysIn.setAttribute("aria-invalid",String(on));if(on)daysIn.setAttribute("aria-describedby","owndayserr");else daysIn.removeAttribute("aria-describedby");}
     sel.onchange=function(){document.getElementById("owndays").hidden=sel.value!=="custom";};
