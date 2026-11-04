@@ -520,7 +520,8 @@ a{color:var(--brand)}
   var lastTrigger=null;
   function openSheet(p,trigger){
     lastTrigger=trigger;
-    var cur = p.reason_code==="ai_off" ? "two" : "ai";
+    var scope=trigger.closest(".card, .checkin-line"), saved=scope&&scope._ck;
+    var cur = saved ? saved.ck : p.reason_code==="ai_off" ? "two" : "ai";
     var weeks = rel(p.checkin_days_before);
     var opts=[
       ["ai","Let AI adjust the timing","Based on when you usually act on appointments. Currently "+weeks+" ahead."],
@@ -534,8 +535,8 @@ a{color:var(--brand)}
       '<fieldset style="border:0;margin:0;padding:0"><legend class="sr-only">When should we check in?</legend>'+
       opts.map(function(o){var isAi=o[0]==="ai";return '<label class="opt'+(isAi?' ai-opt':'')+(o[0]==="own"&&cur==="own"?' own-open':'')+'"><input type="radio" name="ck" value="'+o[0]+'"'+(o[0]===cur?' checked':'')+'><span><b>'+o[1]+(o[0]===cur?' (current)':'')+'</b><span>'+o[2]+'</span></span>'+(isAi?'<span class="tag corner" aria-hidden="true">AI</span>':'')+'</label>'+
         (o[0]==="own"?'<div class="own-when" id="ownwhen"'+(cur==="own"?'':' hidden')+'><label for="ownweeks">How long before the appointment?</label><select id="ownweeks">'+
-          [["7","1 week"],["10","10 days"],["14","2 weeks"],["21","3 weeks"],["28","4 weeks"],["custom","Custom"]].map(function(w){return '<option value="'+w[0]+'"'+(w[0]==="21"?' selected':'')+'>'+w[1]+'</option>';}).join("")+'</select>'+
-          '<div class="own-days" id="owndays" hidden><label for="owndaysin">Days before the appointment</label><input type="number" id="owndaysin" inputmode="numeric" min="7" max="28" step="1">'+
+          [["7","1 week"],["10","10 days"],["14","2 weeks"],["21","3 weeks"],["28","4 weeks"],["custom","Custom"]].map(function(w){return '<option value="'+w[0]+'"'+(w[0]===(saved&&saved.sel||"21")?' selected':'')+'>'+w[1]+'</option>';}).join("")+'</select>'+
+          '<div class="own-days" id="owndays"'+(saved&&saved.sel==="custom"?'':' hidden')+'><label for="owndaysin">Days before the appointment</label><input type="number" id="owndaysin" inputmode="numeric" min="7" max="28" step="1" value="'+(saved&&saved.days||"")+'">'+
           '<p class="field-err" id="owndayserr" hidden>Choose between 7 and 28 days</p></div></div>':'');}).join("")+
       '</fieldset><button class="primary" id="save">Save</button></div></div>';
     document.getElementById("st").focus();
@@ -545,26 +546,37 @@ a{color:var(--brand)}
     function setDaysErr(on){daysErr.hidden=!on;daysIn.setAttribute("aria-invalid",String(on));if(on)daysIn.setAttribute("aria-describedby","owndayserr");else daysIn.removeAttribute("aria-describedby");}
     sel.onchange=function(){document.getElementById("owndays").hidden=sel.value!=="custom";};
     daysIn.oninput=function(){if(!daysErr.hidden)setDaysErr(false);};
-    // swap the card's timing label (check-in card only) and keep focus on its new settings link
-    function setCardLabel(text,link){
-      var box=lastTrigger&&lastTrigger.closest(".ai"); if(!box) return null;
-      var nb=document.createElement("div"); nb.className="ai no-tag";
-      nb.innerHTML='<p>'+esc(text)+' <button class="linkbtn" data-settings>'+link+'</button></p>';
+    // swap the timing label (check-in card or booking line) and keep focus on its new settings link
+    // lineText: shorter label for the booking line, where the timing is already stated above it
+    function setLabel(text,link,days,when,lineText){
+      var box=lastTrigger&&lastTrigger.closest(".ai, .status-row"); if(!box) return null;
+      if(!scope._orig) scope._orig=box.outerHTML;
       var old=$screen.querySelector(".toast.saved"); if(old) old.remove();
+      var nb, label='<p>'+esc(lineText&&!box.classList.contains("ai")?lineText:text)+' <button class="linkbtn" data-settings'+(box.classList.contains("ai")?'':' style="min-height:0"')+'>'+link+'</button></p>';
+      if(text===null){ var t=document.createElement("div"); t.innerHTML=scope._orig; nb=t.firstChild; }
+      else if(box.classList.contains("ai")){ nb=document.createElement("div"); nb.className="ai no-tag"; nb.innerHTML=label; }
+      else{
+        nb=box.cloneNode(true); var tag=nb.querySelector(".tag"); if(tag) tag.remove();
+        nb.querySelector(".lead").textContent="We’ll check in with you around "+short(minus(BOOKING_DERM.appointment_date,days))+", "+when+" before, to see if this still works for you.";
+        nb.querySelector("[data-settings]").parentNode.outerHTML=label;
+      }
       box.replaceWith(nb); var btn=nb.querySelector("[data-settings]"); btn.onclick=function(){openSheet(p,btn);}; lastTrigger=btn;
       return nb;
     }
     document.getElementById("save").onclick=function(){
-      var choice=$overlay.querySelector('input[name="ck"]:checked');
-      if(choice&&choice.value==="two") setCardLabel("We check in 2 weeks before your appointment.","Let Doctolib adjust the timing to you");
-      if(!choice||choice.value!=="own"){closeSheet();announce("Check-in settings saved.");return;}
-      var when=sel.options[sel.selectedIndex].text;
-      if(sel.value==="custom"){
+      var choice=$overlay.querySelector('input[name="ck"]:checked'), ck=choice?choice.value:cur;
+      var when=sel.options[sel.selectedIndex].text, days=Number(sel.value);
+      if(ck==="own"&&sel.value==="custom"){
         var v=daysIn.value.trim(), n=Number(v);
         if(!/^\d+$/.test(v)||n<7||n>28){setDaysErr(true);daysIn.focus();return;}
-        when=n+" days";
+        when=n+" days"; days=n;
       }
-      var msg="Saved. We’ll check in "+when+" before your appointments.", host=setCardLabel("We check in "+when+" before your appointments, as you chose.","Check-in settings")||(lastTrigger&&lastTrigger.closest("div"));
+      var changed=ck!==cur||(ck==="own"&&saved&&(saved.sel!==sel.value||saved.days!==daysIn.value.trim()));
+      if(scope) scope._ck={ck:ck,sel:sel.value,days:sel.value==="custom"?daysIn.value.trim():""};
+      if(changed&&ck==="two") setLabel("We check in 2 weeks before your appointment.","Let Doctolib adjust the timing to you",14,"2 weeks");
+      if(changed&&ck==="ai"&&scope&&scope._orig) setLabel(null);
+      if(ck!=="own"){closeSheet();announce("Check-in settings saved.");return;}
+      var msg="Saved. We’ll check in "+when+" before your appointments.", host=setLabel("We check in "+when+" before your appointments, as you chose.","Check-in settings",days,when,"Timing set by you.")||(lastTrigger&&lastTrigger.closest("div"));
       closeSheet();
       if(host&&document.body.contains(host)){var old=$screen.querySelector(".toast.saved");if(old)old.remove();var t=document.createElement("p");t.className="toast saved";t.textContent=msg;host.insertAdjacentElement("afterend",t);}
       announce(msg);
