@@ -145,6 +145,9 @@ a{color:var(--brand)}
 .secondary{display:block;width:100%;min-height:52px;margin-top:12px;border:1.5px solid var(--control);border-radius:10px;background:var(--surface);font-weight:500;cursor:pointer;color:var(--ink);text-align:center;line-height:49px;text-decoration:none}
 
 .secondary[hidden]{display:none}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.msgtext{display:block;width:100%;min-height:140px;margin-top:16px;padding:12px;border:1px solid var(--control);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;resize:vertical}
+.msgtext::placeholder{color:var(--ink-2);opacity:1}
 .sum{margin-top:16px}
 .appt{margin-top:16px;overflow:hidden}
 .appt-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px;background:var(--ink);color:var(--surface)}
@@ -449,14 +452,32 @@ a{color:var(--brand)}
     document.getElementById("home").onclick=function(){renderCard(current.variant);};
     focusScreen();
   }
+  var URGENT='<div class="urgent"><p>If it can’t wait until your appointment: call the medical on-call service at <a href="tel:116117">116117</a> (free, 24/7). In an emergency: call <a href="tel:112">112</a>.</p></div>';
+  function composeMessage(p){
+    var b=p.booking;
+    clearTimers(); current.view="msg"; bar("My appointments",true);
+    $screen.innerHTML='<div class="msg"><h2>Message to '+esc(b.practice_name)+'</h2>'+
+      '<label class="sr-only" for="msgtext">Message to '+esc(b.practice_name)+'</label>'+
+      '<textarea class="msgtext" id="msgtext" rows="6" placeholder="Write your message"></textarea>'+
+      '<button class="primary" id="msgsend" disabled>Send</button>'+
+      '<button class="secondary" id="msgback">Back</button></div>';
+    var ta=document.getElementById("msgtext"), send=document.getElementById("msgsend");
+    ta.oninput=function(){send.disabled=!ta.value.trim();};
+    send.onclick=function(){if(!ta.value.trim())return;message("Message sent to "+esc(b.practice_name),'<p>The practice usually replies within 1 to 2 working days.</p>'+URGENT);};
+    document.getElementById("msgback").onclick=function(){action("contact",p);};
+    focusScreen();
+  }
   function action(a,p,mode){
     var b=p.booking, appt=d(b.appointment_date);
     if(a==="still") return message("Great, see you on "+short(appt)+" at "+esc(b.appointment_time)+".",summaryCard(b,appt,b.appointment_time));
     if(a==="cancel") return confirmCancel(p);
-    if(a==="contact") return message(esc(b.practice_name),
-      '<p><a href="tel:+493012345678">030 1234 5678</a></p>'+
-      '<button class="secondary" id="msgbtn">Send a message</button>'+
-      '<div class="urgent"><p>If it can’t wait: call <a href="tel:116117">116117</a>. In an emergency: <a href="tel:112">112</a>.</p></div>');
+    if(a==="contact"){
+      message(esc(b.practice_name),
+        '<p><a href="tel:+493012345678">030 1234 5678</a></p>'+
+        '<button class="primary" id="msgbtn">Send a message</button>'+URGENT);
+      document.getElementById("msgbtn").onclick=function(){composeMessage(p);};
+      return;
+    }
     if(a==="reschedule"){
       clearTimers(); current.view="msg"; bar("My appointments",true);
       var POOL=[["8:00","8:30","9:15","9:45","10:30","11:15","13:00","14:30","16:00"],
@@ -513,8 +534,6 @@ a{color:var(--brand)}
       document.getElementById("bookagain").onclick=function(){action("reschedule",p,"book");};};
     document.getElementById("scrim").onclick=function(e){if(e.target.id==="scrim")closeSheet();};
   }
-  // msg button inside contact screen
-  document.addEventListener("click",function(e){if(e.target&&e.target.id==="msgbtn")announce("Messaging is not part of this prototype.");});
 
   // ---------- settings sheet ----------
   var lastTrigger=null;
