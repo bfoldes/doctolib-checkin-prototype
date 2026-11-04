@@ -226,6 +226,8 @@ a{color:var(--brand)}
 (function(){
   // Set to false to move the AI label back to the bottom of the card (Lesson 5 layout)
   var AI_LABEL_TOP = true;
+  // Test mode: add ?test to the link to hide the state switcher for testers
+  try{ if(new URLSearchParams(location.search).has("test")) document.querySelector(".proto").hidden=true; }catch(e){}
   // ---------- state payloads (from the design context brief) ----------
   var BOOKING_LONG = {
     specialty:"Internal medicine and cardiology",
