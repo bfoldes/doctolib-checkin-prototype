@@ -202,6 +202,10 @@ a{color:var(--brand)}
 .opt b{font-weight:500;display:block}
 .opt span{font-size:14px;color:var(--ink-2)}
 .toast{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:var(--soft)}
+.own-when{margin:-2px 0 10px;padding:0 12px}
+.own-when label{display:block;font-weight:500;margin-bottom:6px}
+.own-when select{width:100%;min-height:48px;padding:0 12px;border:1px solid var(--control);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px;cursor:pointer}
+.toast.saved{margin:10px 0 0}
 .list-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
 </style>
 </head>
@@ -522,10 +526,21 @@ a{color:var(--brand)}
       '<h2 id="st" tabindex="-1">Check-in settings</h2>'+
       '<p>Check-ins ask if your appointment still works for you, ahead of the date. Your day-before reminder stays the same.</p>'+
       '<fieldset style="border:0;margin:0;padding:0"><legend class="sr-only">When should we check in?</legend>'+
-      opts.map(function(o){var isAi=o[0]==="ai";return '<label class="opt'+(isAi?' ai-opt':'')+'"><input type="radio" name="ck" value="'+o[0]+'"'+(o[0]===cur?' checked':'')+'><span><b>'+o[1]+(o[0]===cur?' (current)':'')+'</b><span>'+o[2]+'</span></span>'+(isAi?'<span class="tag corner" aria-hidden="true">AI</span>':'')+'</label>';}).join("")+
+      opts.map(function(o){var isAi=o[0]==="ai";return '<label class="opt'+(isAi?' ai-opt':'')+'"><input type="radio" name="ck" value="'+o[0]+'"'+(o[0]===cur?' checked':'')+'><span><b>'+o[1]+(o[0]===cur?' (current)':'')+'</b><span>'+o[2]+'</span></span>'+(isAi?'<span class="tag corner" aria-hidden="true">AI</span>':'')+'</label>'+
+        (o[0]==="own"?'<div class="own-when" id="ownwhen"'+(cur==="own"?'':' hidden')+'><label for="ownweeks">How long before the appointment?</label><select id="ownweeks">'+
+          [1,2,3,4].map(function(n){return '<option value="'+n+'"'+(n===3?' selected':'')+'>'+n+(n===1?' week':' weeks')+'</option>';}).join("")+'</select></div>':'');}).join("")+
       '</fieldset><button class="primary" id="save">Save</button></div></div>';
     document.getElementById("st").focus();
-    document.getElementById("save").onclick=function(){closeSheet();announce("Check-in settings saved.");};
+    var ownWhen=document.getElementById("ownwhen");
+    $overlay.querySelectorAll('input[name="ck"]').forEach(function(r){r.onchange=function(){ownWhen.hidden=r.value!=="own";};});
+    document.getElementById("save").onclick=function(){
+      var choice=$overlay.querySelector('input[name="ck"]:checked');
+      if(!choice||choice.value!=="own"){closeSheet();announce("Check-in settings saved.");return;}
+      var sel=document.getElementById("ownweeks"), msg="Saved. We’ll check in "+sel.options[sel.selectedIndex].text+" before your appointments.", host=lastTrigger&&lastTrigger.closest("div");
+      closeSheet();
+      if(host&&document.body.contains(host)){var old=$screen.querySelector(".toast.saved");if(old)old.remove();var t=document.createElement("p");t.className="toast saved";t.textContent=msg;host.insertAdjacentElement("afterend",t);}
+      announce(msg);
+    };
     document.getElementById("scrim").onclick=function(e){if(e.target.id==="scrim")closeSheet();};
   }
   function closeSheet(){ if($overlay.innerHTML){$overlay.innerHTML=""; if(lastTrigger&&document.body.contains(lastTrigger))lastTrigger.focus();} }
@@ -533,7 +548,7 @@ a{color:var(--brand)}
     if(e.key==="Escape")closeSheet();
     if(e.key==="Tab"){
       var dlg=$overlay.querySelector(".sheet"); if(!dlg) return;
-      var f=Array.prototype.filter.call(dlg.querySelectorAll("button, input:checked, a[href]"),function(x){return x.offsetParent!==null;});
+      var f=Array.prototype.filter.call(dlg.querySelectorAll("button, input:checked, select, a[href]"),function(x){return x.offsetParent!==null;});
       if(!f.length) return;
       var first=f[0], last=f[f.length-1];
       if(!dlg.contains(document.activeElement)){e.preventDefault();first.focus();}
