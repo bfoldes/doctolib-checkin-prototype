@@ -181,6 +181,8 @@ a{color:var(--brand)}
 .msg p{margin:8px 0;color:var(--ink-2)}
 .urgent{margin-top:20px;padding:14px;border-radius:10px;background:var(--muted-surface)}
 .urgent p{margin:0;color:var(--ink)}
+.fakelink{display:inline;padding:0;border:0;background:none;color:var(--brand);font:inherit;text-decoration:underline;cursor:pointer}
+.msg p.callnote,.urgent p.callnote{margin:8px 0 0;font-size:16px;color:var(--ink-2)}
 .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
 .slots button{min-height:48px;border:0;border-radius:8px;background:var(--soft);color:var(--ink);font-weight:500;cursor:pointer}
 .acc{border:1px solid var(--line);border-radius:12px;margin-top:10px;overflow:hidden}
@@ -452,7 +454,15 @@ a{color:var(--brand)}
     document.getElementById("home").onclick=function(){renderCard(current.variant);};
     focusScreen();
   }
-  var URGENT='<div class="urgent"><p>If it can’t wait until your appointment: call the medical on-call service at <a href="tel:116117">116117</a> (free, 24/7). In an emergency: call <a href="tel:112">112</a>.</p></div>';
+  var URGENT='<div class="urgent"><p>If it can’t wait until your appointment: call the medical on-call service at <button type="button" class="fakelink" data-num="116117">116117</button> (free, 24/7). In an emergency: call <button type="button" class="fakelink" data-num="112">112</button>.</p></div>';
+  // phone numbers: nothing is dialled, show a note under the tapped number instead
+  document.addEventListener("click",function(e){
+    var n=e.target&&e.target.closest&&e.target.closest(".fakelink"); if(!n) return;
+    var old=$screen.querySelector(".callnote"); if(old) old.remove();
+    var note=document.createElement("p"); note.className="callnote"; note.setAttribute("role","status");
+    note.textContent="In the real app, this would call "+n.dataset.num.replace(/ /g,"\u00a0")+". Nothing is dialled in this prototype.";
+    n.closest("p").insertAdjacentElement("afterend",note);
+  });
   function composeMessage(p){
     var b=p.booking;
     clearTimers(); current.view="msg"; bar("My appointments",true);
@@ -473,7 +483,7 @@ a{color:var(--brand)}
     if(a==="cancel") return confirmCancel(p);
     if(a==="contact"){
       message(esc(b.practice_name),
-        '<p><a href="tel:+493012345678">030 1234 5678</a></p>'+
+        '<p><button type="button" class="fakelink" data-num="030 1234 5678">030 1234 5678</button></p>'+
         '<button class="primary" id="msgbtn">Send a message</button>'+URGENT,true);
       document.getElementById("msgbtn").onclick=function(){composeMessage(p);};
       return;
